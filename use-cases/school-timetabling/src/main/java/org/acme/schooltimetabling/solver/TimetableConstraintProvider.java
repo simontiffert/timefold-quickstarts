@@ -1,6 +1,7 @@
 package org.acme.schooltimetabling.solver;
 
 import java.time.Duration;
+import java.util.Random;
 
 import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
 import ai.timefold.solver.core.api.score.stream.Constraint;
@@ -41,7 +42,7 @@ public class TimetableConstraintProvider implements ConstraintProvider {
                         // ... in the same room ...
                         Joiners.equal(Lesson::getRoom))
                 // ... and penalize each pair with a hard weight.
-                .penalize(HardSoftScore.ONE_HARD)
+                .penalize(HardSoftScore.ONE_HARD, (x,y) -> new Random().nextInt(10))
                 .justifyWith((lesson1, lesson2, score) -> new RoomConflictJustification(lesson1.getRoom(), lesson1.getId(), lesson2.getId()))
                 .asConstraint("Room conflict");
     }
