@@ -6,6 +6,7 @@ import java.util.Objects;
 import ai.timefold.solver.core.api.domain.variable.VariableListener;
 import ai.timefold.solver.core.api.score.director.ScoreDirector;
 
+import org.acme.vehiclerouting.domain.Standstill;
 import org.acme.vehiclerouting.domain.Visit;
 import org.acme.vehiclerouting.domain.VehicleRoutePlan;
 
@@ -29,7 +30,7 @@ public class ArrivalTimeUpdatingVariableListener implements VariableListener<Veh
             return;
         }
 
-        Visit previousVisit = visit.getPreviousVisit();
+        Standstill previousVisit = visit.getPreviousVisit();
         LocalDateTime departureTime =
                 previousVisit == null ? visit.getVehicle().getDepartureTime() : previousVisit.getDepartureTime();
 

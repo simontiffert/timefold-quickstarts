@@ -7,10 +7,10 @@ import java.time.temporal.TemporalUnit;
 
 import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
-import ai.timefold.solver.core.api.domain.variable.InverseRelationShadowVariable;
-import ai.timefold.solver.core.api.domain.variable.NextElementShadowVariable;
-import ai.timefold.solver.core.api.domain.variable.PreviousElementShadowVariable;
-import ai.timefold.solver.core.api.domain.variable.ShadowVariable;
+import ai.timefold.solver.core.api.domain.valuerange.CountableValueRange;
+import ai.timefold.solver.core.api.domain.valuerange.ValueRangeFactory;
+import ai.timefold.solver.core.api.domain.valuerange.ValueRangeProvider;
+import ai.timefold.solver.core.api.domain.variable.*;
 
 import org.acme.vehiclerouting.solver.ArrivalTimeUpdatingVariableListener;
 
@@ -22,10 +22,13 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 @JsonIdentityInfo(scope = Visit.class, generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @PlanningEntity
-public class Visit {
+public class Visit implements Standstill {
 
     @PlanningId
     private String id;
+
+    @PlanningVariable(valueRangeProviderRefs = "counterRange")
+    private Integer count;
     private String name;
     private Location location;
     private int demand;
@@ -34,15 +37,15 @@ public class Visit {
     private Duration serviceDuration;
 
     @JsonIdentityReference(alwaysAsId = true)
-    @InverseRelationShadowVariable(sourceVariableName = "visits")
+    @AnchorShadowVariable(sourceVariableName = "previousVisit")
     private Vehicle vehicle;
     @JsonIdentityReference(alwaysAsId = true)
-    @PreviousElementShadowVariable(sourceVariableName = "visits")
-    private Visit previousVisit;
+    @PlanningVariable(
+            valueRangeProviderRefs = { "vehicles", "visits" },
+            graphType = PlanningVariableGraphType.CHAINED)
+    private Standstill previousVisit;
     @JsonIdentityReference(alwaysAsId = true)
-    @NextElementShadowVariable(sourceVariableName = "visits")
     private Visit nextVisit;
-    @ShadowVariable(variableListenerClass = ArrivalTimeUpdatingVariableListener.class, sourceVariableName = "vehicle")
     @ShadowVariable(variableListenerClass = ArrivalTimeUpdatingVariableListener.class, sourceVariableName = "previousVisit")
     private LocalDateTime arrivalTime;
 
@@ -108,11 +111,11 @@ public class Visit {
         this.vehicle = vehicle;
     }
 
-    public Visit getPreviousVisit() {
+    public Standstill getPreviousVisit() {
         return previousVisit;
     }
 
-    public void setPreviousVisit(Visit previousVisit) {
+    public void setPreviousVisit(Standstill previousVisit) {
         this.previousVisit = previousVisit;
     }
 
@@ -132,10 +135,22 @@ public class Visit {
         this.arrivalTime = arrivalTime;
     }
 
+    public Integer getCount() {
+        return count;
+    }
+
+    public void setCount(Integer count) {
+        this.count = count;
+    }
+
     // ************************************************************************
     // Complex methods
     // ************************************************************************
 
+    @ValueRangeProvider(id = "counterRange")
+    public CountableValueRange<Integer> getCounterRange() {
+        return ValueRangeFactory.createIntValueRange(0, 5);
+    }
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public LocalDateTime getDepartureTime() {
         if (arrivalTime == null) {

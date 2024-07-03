@@ -117,7 +117,7 @@ class VehicleRoutingConstraintProviderTest {
     }
 
     static void connect(Vehicle vehicle, Visit... visits) {
-        vehicle.setVisits(Arrays.asList(visits));
+        //vehicle.setVisits(Arrays.asList(visits));
         for (int i = 0; i < visits.length; i++) {
             Visit visit = visits[i];
             visit.setVehicle(vehicle);

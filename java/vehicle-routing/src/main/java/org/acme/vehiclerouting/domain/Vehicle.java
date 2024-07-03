@@ -1,33 +1,29 @@
 package org.acme.vehiclerouting.domain;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import ai.timefold.solver.core.api.domain.entity.PlanningEntity;
 import ai.timefold.solver.core.api.domain.lookup.PlanningId;
-import ai.timefold.solver.core.api.domain.variable.PlanningListVariable;
-
+import ai.timefold.solver.core.api.domain.variable.PlanningVariable;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 @JsonIdentityInfo(scope = Vehicle.class, generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@PlanningEntity
-public class Vehicle {
+public class Vehicle implements Standstill {
 
     @PlanningId
     private String id;
+
     private int capacity;
     @JsonIdentityReference
     private Location homeLocation;
 
     private LocalDateTime departureTime;
 
-    @JsonIdentityReference(alwaysAsId = true)
-    @PlanningListVariable
-    private List<Visit> visits;
+    private Visit nextVisit;
 
     public Vehicle() {
     }
@@ -37,7 +33,6 @@ public class Vehicle {
         this.capacity = capacity;
         this.homeLocation = homeLocation;
         this.departureTime = departureTime;
-        this.visits = new ArrayList<>();
     }
 
     public String getId() {
@@ -68,12 +63,34 @@ public class Vehicle {
         return departureTime;
     }
 
-    public List<Visit> getVisits() {
-        return visits;
+    @Override
+    public Location getLocation() {
+        return homeLocation;
     }
 
-    public void setVisits(List<Visit> visits) {
-        this.visits = visits;
+    @Override
+    public Visit getNextVisit() {
+        return nextVisit;
+    }
+
+    @Override
+    public void setNextVisit(Visit nextVisit) {
+        this.nextVisit = nextVisit;
+    }
+
+    public void setDepartureTime(LocalDateTime departureTime) {
+        this.departureTime = departureTime;
+    }
+
+    public List<Visit> getVisits() {
+        List<Visit> visits = new ArrayList<>();
+        Visit visit = nextVisit;
+        while (visit != null) {
+            visits.add(visit);
+            visit = visit.getNextVisit();
+        }
+
+        return visits;
     }
 
     // ************************************************************************
@@ -83,7 +100,7 @@ public class Vehicle {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public int getTotalDemand() {
         int totalDemand = 0;
-        for (Visit visit : visits) {
+        for (Visit visit : getVisits()) {
             totalDemand += visit.getDemand();
         }
         return totalDemand;
@@ -91,14 +108,14 @@ public class Vehicle {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public long getTotalDrivingTimeSeconds() {
-        if (visits.isEmpty()) {
+        if (getVisits().isEmpty()) {
             return 0;
         }
 
         long totalDrivingTime = 0;
         Location previousLocation = homeLocation;
 
-        for (Visit visit : visits) {
+        for (Visit visit : getVisits()) {
             totalDrivingTime += previousLocation.getDrivingTimeTo(visit.getLocation());
             previousLocation = visit.getLocation();
         }
@@ -109,11 +126,11 @@ public class Vehicle {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     public LocalDateTime arrivalTime() {
-        if (visits.isEmpty()) {
+        if (getVisits().isEmpty()) {
             return departureTime;
         }
 
-        Visit lastVisit = visits.get(visits.size() - 1);
+        Visit lastVisit = getVisits().get(getVisits().size() - 1);
         return lastVisit.getDepartureTime().plusSeconds(lastVisit.getLocation().getDrivingTimeTo(homeLocation));
     }
 
